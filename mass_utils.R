@@ -1,4 +1,21 @@
 
+
+   movie_tooltip <- function(x) {
+     if (is.null(x)) return(NULL)
+     if (is.null(x$ID)) return(NULL)
+ 
+     # Pick out the movie with this ID
+     if (0){
+     all_movies <- isolate(movies())
+     movie <- all_movies[all_movies$ID == x$ID, ]
+ 
+     paste0("<b>", movie$Title, "</b><br>",
+       movie$Year, "<br>",
+       "$", format(movie$BoxOffice, big.mark = ",", scientific = FALSE)
+     )
+     }
+   }
+
 ##################################################################################
 ##################################################################################
 # https://stackoverflow.com/questions/6177629/how-to-silence-the-output-from-this-r-package

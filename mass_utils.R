@@ -1,4 +1,26 @@
 
+##################################################################################
+##################################################################################
+# https://stackoverflow.com/questions/6177629/how-to-silence-the-output-from-this-r-package
+##################################################################################
+shut_up = function(expr) {
+  #temp file
+  f = file()
+
+  #write output to that file
+  sink(file = f)
+
+  #evaluate expr in original environment
+  y = eval(expr, envir = parent.frame())
+
+  #close sink
+  sink()
+
+  #get rid of file
+  close(f)
+
+  y
+}
 
 ##################################################################################
 ##################################################################################
@@ -330,12 +352,14 @@ mycolors = function(){
 fit_to_number_incidents_per_day = function(wdat,lover_dispersion=T){
 
   if (lover_dispersion){
-    mylog=capture.output({fit_pop_time = gamlss(num~offset(log(population))+x,family=NBI,data=wdat,control=gamlss.control(trace=F))})
+    #mylog=capture.output({fit_pop_time = gamlss(num~offset(log(population))+x,family=NBI,data=wdat,control=gamlss.control(trace=F))})
+    mylog=shut_up({fit_pop_time = gamlss(num~offset(log(population))+x,family=NBI,data=wdat,control=gamlss.control(trace=F))})
     sfit=summary(fit_pop_time, save=TRUE)
     inc_per_year = sfit$mu.coef.table[2,1]*365.25
     p_pop_time=sfit$mu.coef.table[2,4]
   }else{
-    mylog=capture.output({fit_pop_time = glm(num~offset(log(population))+x,family="poisson",data=wdat)})
+    #mylog=capture.output({fit_pop_time = glm(num~offset(log(population))+x,family="poisson",data=wdat)})
+    mylog=shut_up({fit_pop_time = glm(num~offset(log(population))+x,family="poisson",data=wdat)})
     inc_per_year = fit_pop_time$coef[2]*365.25
     p_pop_time=summary(fit_pop_time)$coef[2,4]
   }
@@ -435,7 +459,8 @@ plot_fraction_involving_banned_weaponry = function(zdat
 ##################################################################################
 # fit to the temporal trends in the number of casualties
 ##################################################################################
-fit_temporal_trends_casualties = function(temp,min_num_killed){
+fit_temporal_trends_casualties = function(temp
+                                         ,min_num_killed){
 
   mydata = data.frame(yobs = temp$num_gun_fatalities_public)
   mydata$dateb = temp$date-min(temp$date)
@@ -466,9 +491,10 @@ fit_temporal_trends_casualties = function(temp,min_num_killed){
   
   myfit = list()
   myA = list()
+  vlike = numeric(0)
+
   myfitb = list()
   myAb = list()
-  vlike = numeric(0)
   vlikeb = numeric(0)
   for (lfit in 4:4){
     cat(names(mydata),"\n")
@@ -480,19 +506,25 @@ fit_temporal_trends_casualties = function(temp,min_num_killed){
     if (lfit==5) npar = 3
     if (lfit==6) npar = 4
     if (lfit==7) npar = 4
-    mylog=capture.output({r = optim(par=rep(0.1,(npar+1)),fn=negll_trunc_negbinom,hessian=T,mylist=mylist,control=list(maxit=1000))})
-    mylog=capture.output({rb = optim(par=rep(0,npar),fn=negll_trunc_logseries,hessian=T,mylist=mylist,control=list(maxit=1000))})
+
+    mylog=shut_up({r = optim(par=rep(0.1,(npar+1)),fn=negll_trunc_negbinom,hessian=T,mylist=mylist,control=list(maxit=1000))})
     vlike = c(vlike,r$value)
-    vlikeb = c(vlikeb,rb$value)
     A = solve(r$hessian)
-    Ab = solve(rb$hessian)
     myfit[[lfit]] = r
     myA[[lfit]] = A
-    myfitb[[lfit]] = rb
-    myAb[[lfit]] = Ab
     if (lfit==4){
-      mydata$p = logseries_fun(rb$par,mylist)
       mydata$mu = negbinom_fun(r$par,mylist)
+    }
+
+    if (0){
+      mylog=shut_up({rb = optim(par=rep(0,npar),fn=negll_trunc_logseries,hessian=T,mylist=mylist,control=list(maxit=1000))})
+      vlikeb = c(vlikeb,rb$value)
+      Ab = solve(rb$hessian)
+      myfitb[[lfit]] = rb
+      myAb[[lfit]] = Ab
+      if (lfit==4){
+        mydata$p = logseries_fun(rb$par,mylist)
+      }
     }
   }
   pvalue = 1-pchisq((myfit[[4]]$par[3]/sqrt(myA[[4]][3,3]))^2,1)
@@ -500,7 +532,7 @@ fit_temporal_trends_casualties = function(temp,min_num_killed){
   mydata$ypred = rep(0,nrow(mydata))
   x = seq(min_num_killed,1000)
   for (i in 1:nrow(mydata)){
-    if (1){
+    if (0){
       y = dtrunc_logseries(x,mydata$p[i],min_num_killed)
     }else{
       y = dtrunc_negbinom(x,mydata$mu[i],exp(myfit[[4]]$par[1]),min_num_killed)

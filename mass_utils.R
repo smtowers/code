@@ -414,7 +414,7 @@ plot_fraction_involving_banned_weaponry = function(zdat
                                                   ,mycolors
                                                   ){
 
-  plot(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=mycolors$data_color,cex=acex,xlab="Date",ylab="Fraction involving weaponry banned during FAWB",main="Fraction involving weaponry\n banned during FAWB",pch=mycolors$apch,ylim=c(0,1))
+  plot(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=mycolors$data_color,cex=mycolors$acex,xlab="Date",ylab="Fraction involving weaponry banned during FAWB",main="Fraction involving weaponry\n banned during FAWB",pch=mycolors$apch,ylim=c(0,1))
 
   u <- par("usr")
   rect(u[1], u[3], u[2], u[4], col = mycolors$background_color, border = mycolors$background_color)

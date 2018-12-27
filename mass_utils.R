@@ -238,9 +238,9 @@ read_in_data_github = function(input){
 
   thetable = subset(thetable,year>=input$year_range[1]&year<=input$year_range[2])
   if (input$num_casualties=="no_sel"){
-    thetable = subset(thetable,num_gun_fatalities_public>=input$min_num_killed)
+    thetable = subset(thetable,num_gun_fatalities_public>=input$min_num_casualties)
   }else{
-    thetable = subset(thetable,num_shot_public>=input$min_num_killed)
+    thetable = subset(thetable,num_shot_public>=input$min_num_casualties)
   }
 
   #if (input$include_only_meet_definition){
@@ -491,9 +491,10 @@ plot_fraction_involving_banned_weaponry = function(zdat
 # fit to the temporal trends in the number of casualties
 ##################################################################################
 fit_temporal_trends_casualties = function(temp
-                                         ,min_num_killed){
+                                         ,min_num_casualties
+                                         ,luse_logseries=F){
 
-  mydata = data.frame(yobs = temp$num_gun_fatalities_public)
+  mydata = data.frame(yobs = temp$num_casualties)
   mydata$dateb = temp$date-min(temp$date)
   mydata$date = temp$date
   
@@ -511,7 +512,7 @@ fit_temporal_trends_casualties = function(temp
   ################################################################################
   mylist = list()
   mylist[[1]] = mydata
-  mylist[[2]] = min_num_killed
+  mylist[[2]] = min_num_casualties
   lfit = 1 # just constant fit
   lfit = 2 # constant+factor(banned)
   lfit = 3 # constant+factor(banned)+factor(none)
@@ -538,16 +539,8 @@ fit_temporal_trends_casualties = function(temp
     if (lfit==6) npar = 4
     if (lfit==7) npar = 4
 
-    mylog=capture.output({r = optim(par=rep(0.1,(npar+1)),fn=negll_trunc_negbinom,hessian=T,mylist=mylist,control=list(maxit=1000))})
-    vlike = c(vlike,r$value)
-    A = solve(r$hessian)
-    myfit[[lfit]] = r
-    myA[[lfit]] = A
-    if (lfit==4){
-      mydata$mu = negbinom_fun(r$par,mylist)
-    }
 
-    if (0){
+    if (luse_logseries){
       mylog=capture.output({rb = optim(par=rep(0,npar),fn=negll_trunc_logseries,hessian=T,mylist=mylist,control=list(maxit=1000))})
       vlikeb = c(vlikeb,rb$value)
       Ab = solve(rb$hessian)
@@ -556,17 +549,30 @@ fit_temporal_trends_casualties = function(temp
       if (lfit==4){
         mydata$p = logseries_fun(rb$par,mylist)
       }
+    }else{
+      mylog=capture.output({r = optim(par=rep(0.1,(npar+1)),fn=negll_trunc_negbinom,hessian=T,mylist=mylist,control=list(maxit=1000))})
+      vlike = c(vlike,r$value)
+      A = solve(r$hessian)
+      myfit[[lfit]] = r
+      myA[[lfit]] = A
+      if (lfit==4){
+        mydata$mu = negbinom_fun(r$par,mylist)
+      }
     }
   }
-  pvalue = 1-pchisq((myfit[[4]]$par[3]/sqrt(myA[[4]][3,3]))^2,1)
+  if (luse_logseries){
+    pvalue = 1-pchisq((myfit[[4]]$par[3]/sqrt(myA[[4]][3,3]))^2,1)
+  }else{
+    pvalue = 1-pchisq((myfitb[[4]]$par[2]/sqrt(myAb[[4]][2,2]))^2,1)
+  }
 
   mydata$ypred = rep(0,nrow(mydata))
-  x = seq(min_num_killed,1000)
+  x = seq(min_num_casualties,1000)
   for (i in 1:nrow(mydata)){
-    if (0){
-      y = dtrunc_logseries(x,mydata$p[i],min_num_killed)
+    if (luse_logseries){
+      y = dtrunc_logseries(x,mydata$p[i],min_num_casualties)
     }else{
-      y = dtrunc_negbinom(x,mydata$mu[i],exp(myfit[[4]]$par[1]),min_num_killed)
+      y = dtrunc_negbinom(x,mydata$mu[i],exp(myfit[[4]]$par[1]),min_num_casualties)
     }
     ymean = weighted.mean(x,y)
     mydata$ypred[i] = ymean
@@ -591,8 +597,20 @@ fit_temporal_trends_casualties = function(temp
              ,p_value = pvalue
              )
          )
+}
 
-
+##################################################################################
+##################################################################################
+##################################################################################
+plot_number_casualties_over_time = function(thetable
+                                           ,myfit
+                                           ,thecolors
+                                           ){
+  plot(thetable$date,thetable$num_casualties,xlab="Date",ylab="\043 casualties per incident",cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color)
+  u <- par("usr")
+  rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
+  points(thetable$date,thetable$num_casualties,cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color)
+  lines(myfit$date,myfit$ypred,col=thecolors$fit_color,lwd=thecolors$alwd)
 }
 
 

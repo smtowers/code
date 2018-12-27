@@ -330,12 +330,12 @@ mycolors = function(){
 fit_to_number_incidents_per_day = function(wdat,lover_dispersion=T){
 
   if (lover_dispersion){
-    mylog=capture.output({fit_pop_time <- gamlss(num~offset(log(population))+x,family=NBI,data=wdat)})
+    mylog=capture.output({fit_pop_time = gamlss(num~offset(log(population))+x,family=NBI,data=wdat,control=gamlss.control(trace=F))})
     sfit=summary(fit_pop_time, save=TRUE)
     inc_per_year = sfit$mu.coef.table[2,1]*365.25
     p_pop_time=sfit$mu.coef.table[2,4]
   }else{
-    mylog=capture.output({fit_pop_time <- glm(num~offset(log(population))+x,family="poisson",data=wdat)})
+    mylog=capture.output({fit_pop_time = glm(num~offset(log(population))+x,family="poisson",data=wdat)})
     inc_per_year = fit_pop_time$coef[2]*365.25
     p_pop_time=summary(fit_pop_time)$coef[2,4]
   }

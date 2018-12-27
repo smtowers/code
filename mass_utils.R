@@ -355,11 +355,11 @@ fit_to_number_incidents_per_day = function(wdat,lover_dispersion=T){
 ##################################################################################
 plot_incidents_over_time=function(zdat
                                  ,myfit
-                                 ,data_color
-                                 ,fit_color
-                                 ,background_color
-                                 ,acex
-                                 ,alwd){
+                                 ,data_color="black"
+                                 ,fit_color="red3"
+                                 ,background_color="cornsilk"
+                                 ,acex=4
+                                 ,alwd=9){
 
   plot(zdat$year,zdat$num,col=data_color,cex=acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=20,ylim=c(0,max(zdat$num+1)))
   u <- par("usr")

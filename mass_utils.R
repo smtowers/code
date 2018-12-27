@@ -315,36 +315,23 @@ aggregate_data_by_year=function(thetable,year_min,year_max,wdat){
 fit_to_number_incidents_per_day = function(wdat,lover_dispersion=T){
 
   if (lover_dispersion){
-    #mylog=capture.output({fit_pop <- gamlss(num~offset(log(population)),family=NBI,data=wdat)})
     mylog=capture.output({fit_pop_time <- gamlss(num~offset(log(population))+x,family=NBI,data=wdat)})
-    #mylog=capture.output({fit_pop_time_ban <- gamlss(num~offset(log(population))+x+xb,family=NBI,data=wdat)})
     sfit=summary(fit_pop_time, save=TRUE)
     inc_per_year = sfit$mu.coef.table[2,1]*365.25
     p_pop_time=sfit$mu.coef.table[2,4]
-
-    #sfit=summary(fit_pop_time_ban, save=TRUE)
-    #p_pop_time_ban1=sfit$mu.coef.table[2,4]
-    #p_pop_time_ban2=sfit$mu.coef.table[3,4]
   }else{
-    #mylog=capture.output({fit_pop <- glm(num~offset(log(population)),family="poisson",data=wdat)})
     mylog=capture.output({fit_pop_time <- glm(num~offset(log(population))+x,family="poisson",data=wdat)})
-    #mylog=capture.output({fit_pop_time_ban <- glm(num~offset(log(population))+x+xb,family="poisson",data=wdat)})
     inc_per_year = fit_pop_time$coef[2]*365.25
     p_pop_time=summary(fit_pop_time)$coef[2,4]
-
-    #p_pop_time_ban1=summary(fit_pop_time_ban)$coef[2,4]
-    #p_pop_time_ban2=summary(fit_pop_time_ban)$coef[3,4]
   }
   percent_rate_inc_per_year = ((exp(inc_per_year)-1))*100
   ypred_per_year = 365.25*predict(fit_pop_time,type="response")
 
   return(list(percent_rate_inc_per_year=percent_rate_inc_per_year
-             ,ypred_per_year=ypred_per_year
-             #,fit_pop=fit_pop
-             ,fit_pop_time=fit_pop_time
-             #,fit_pop_time_ban=fit_pop_time_ban
-             ,p_pop_time=p_pop_time
+             ,pvalue_percent_rate_inc_per_year=p_pop_time
              ,date=wdat$date
+             ,ypred_per_year=ypred_per_year
+             ,fit_pop_time=fit_pop_time
              ))
 
 }
@@ -358,16 +345,84 @@ plot_incidents_over_time=function(zdat
                                  ,data_color="black"
                                  ,fit_color="red3"
                                  ,background_color="cornsilk"
+                                 ,notification_color="purple4"
+                                 ,apch=20
                                  ,acex=4
                                  ,alwd=9){
 
   plot(zdat$year,zdat$num,col=data_color,cex=acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=20,ylim=c(0,max(zdat$num+1)))
   u <- par("usr")
   rect(u[1], u[3], u[2], u[4], col = background_color, border = background_color)
-  points(zdat$year,zdat$num,col=data_color,cex=acex,pch=20)
+  points(zdat$year,zdat$num,col=data_color,cex=acex,pch=apch)
   lines(myfit$date,myfit$ypred_per_year,col=fit_color,lwd=alwd)
 
   return()
+
+}
+
+##################################################################################
+##################################################################################
+# fit to fraction involving FAWB banned weaponry before and after ban
+##################################################################################
+fit_to_fraction_involving_banned_weaponry = function(wdat){
+
+  wdat$ban = rep(1,nrow(wdat))
+  wdat$ban[wdat$julian_day>=julian(09,13,2004)] = 0
+  wdat$banb = 1-wdat$ban
+
+  ldone = 0
+  increase_prob = 0
+  pvalue_increase_prob = 1
+
+  if (sum(wdat$ban)!=nrow(wdat)&sum(wdat$ban)!=0&sum(wdat$ban*wdat$num_known_if_FAWB_weapon_involved)>1){
+    ldone = 1
+    myfit = glm(cbind(wdat$num_FAWB_weapon_involved,wdat$num_known_if_FAWB_weapon_involved-wdat$num_FAWB_weapon_involved)~factor(wdat$banb),family="binomial")
+
+    ypred = predict(myfit,type="response")
+    increase_prob = (max(ypred)-min(ypred))*100
+    pvalue_increase_prob = summary(myfit)$coef[2,4]
+  }else{
+    myfit = glm(cbind(wdat$num_FAWB_weapon_involved,wdat$num_known_if_FAWB_weapon_involved-wdat$num_FAWB_weapon_involved)~1,family="binomial")
+
+    ypred = predict(myfit,type="response")
+  }
+  
+  return(list(myfit=myfit
+             ,date=wdat$date
+             ,ypred=ypred
+             ,ldone=ldone
+             ,increase_prob=increase_prob
+             ,pvalue_increase_prob=pvalue_increase_prob
+             ))
+}
+
+##################################################################################
+##################################################################################
+# plot fraction involving FAWB banned weaponry before and after ban
+##################################################################################
+plot_fraction_involving_banned_weaponry = function(zdat
+                                                  ,myfit
+                                                  ,data_color="black"
+                                                  ,fit_color="red3"
+                                                  ,background_color="cornsilk"
+                                                  ,notification_color="purple4"
+                                                  ,apch=20
+                                                  ,acex=4
+                                                  ,alwd=9){
+
+  plot(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=data_color,cex=acex,xlab="Date",ylab="Fraction involving weaponry banned during FAWB",main="Fraction involving weaponry\n banned during FAWB",pch=apch,ylim=c(0,1))
+
+  u <- par("usr")
+  rect(u[1], u[3], u[2], u[4], col = background_color, border = background_color)
+
+  points(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=data_color,cex=acex,pch=20)
+
+  lines(myfit$date,myfit$ypred,col=fit_color,lwd=alwd)
+  if (myfit$ldone==0){
+    year_mid = mean(zdat$year)
+    text(year_mid,0.22,"(Note: insufficient data to compare periods before and after FAWB)",cex=1.0,font=2,col="purple4")
+
+  }
 
 }
 

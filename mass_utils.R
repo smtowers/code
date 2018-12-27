@@ -657,7 +657,7 @@ plot_number_casualties_over_time = function(thetable
                                            ,lprint=F
                                            ){
 
-  plot(thetable$date,thetable$num_casualties,xlab="Date",ylab="\043 casualties per incident",cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color,ylim=c(0,max(thetable$num_casualties+5)),xlim=input$year_range)
+  plot(thetable$date,thetable$num_casualties,xlab="Date",ylab="\043 casualties per incident",cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color,ylim=c(0,max(thetable$num_casualties+5)),xlim=c(input$year_range[1],(input$year_range[2]+1)))
 
   u <- par("usr")
   rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)

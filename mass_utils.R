@@ -379,7 +379,7 @@ mycolors = function(){
                 ,fit_color="red3"
                 ,background_color="cornsilk"
                 ,notification_color="purple4"
-                ,notification_cex=1.0
+                ,notification_cex=1.2
                 ,apch=20
                 ,acex=4
                 ,alwd=9
@@ -457,7 +457,7 @@ plot_incidents_over_time=function(zdat
     #if (p<0.01) add_string = "**"
     #if (p<0.001) add_string = "***"
     x = xmin + 0.05*xrange
-    y = ymin + 0.82*yrange 
+    y = ymin + 0.80*yrange 
     text(x,y,paste("Increase per year: ",round(myfit$percent_rate_inc_per_year,0),"%",add_string,sep=""),adj=c(0,1),cex=thecolors$notification_cex,col=thecolors$notification_color,font=2)
 
     p = return_p_value_string(myfit$pvalue_percent_rate_inc_per_year)
@@ -675,7 +675,7 @@ plot_number_casualties_over_time = function(thetable
     #if (p<0.01) add_string = "**"
     #if (p<0.001) add_string = "***"
     x = xmin + 0.05*xrange
-    y = ymin + 0.82*yrange
+    y = ymin + 0.80*yrange
     text(x,y,paste("Increase per year: ",round(myfit$per_increase_casualties,0),"%",add_string,sep=""),adj=c(0,1),cex=thecolors$notification_cex,col=thecolors$notification_color,font=2)
 
     p = return_p_value_string(myfit$p_value)

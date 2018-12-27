@@ -550,7 +550,7 @@ fit_temporal_trends_casualties = function(temp
         mydata$p = logseries_fun(rb$par,mylist)
       }
     }else{
-      cat("Got here\n")
+      #cat("Got here\n")
       mylog=capture.output({r = optim(par=rep(0.1,(npar+1)),fn=negll_trunc_negbinom,hessian=T,mylist=mylist,control=list(maxit=1000))})
       vlike = c(vlike,r$value)
       A = solve(r$hessian)

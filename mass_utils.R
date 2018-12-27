@@ -561,9 +561,9 @@ fit_temporal_trends_casualties = function(temp
     }
   }
   if (luse_logseries){
-    pvalue = 1-pchisq((myfit[[4]]$par[3]/sqrt(myA[[4]][3,3]))^2,1)
-  }else{
     pvalue = 1-pchisq((myfitb[[4]]$par[2]/sqrt(myAb[[4]][2,2]))^2,1)
+  }else{
+    pvalue = 1-pchisq((myfit[[4]]$par[3]/sqrt(myA[[4]][3,3]))^2,1)
   }
 
   mydata$ypred = rep(0,nrow(mydata))

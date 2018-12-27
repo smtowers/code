@@ -1,6 +1,7 @@
 
 
-   movie_tooltip <- function(x) {
+if (0){
+   tooltip <- function(x) {
      if (is.null(x)) return(NULL)
      if (is.null(x$ID)) return(NULL)
  
@@ -15,6 +16,29 @@
      )
      }
    }
+}
+##################################################################################
+##################################################################################
+##################################################################################
+return_p_value_string = function(p,ladd_pequals=T){
+  pb = round(p,3)
+  pb[p>=0.10] = as.character(round(p[p>=0.10],2))
+  l = which(p>=0.99&nchar(pb)==1)
+  pb[l] = paste("1.00",sep="")
+  l = which(p>=0.10&nchar(pb)==3)
+  pb[l] = paste(pb[l],"0",sep="")
+  l = which(p<0.10&p>0.001&nchar(pb)==4)
+  pb[l] = paste(pb[l],"0",sep="")
+  pb[p<0.001] = "<0.001"
+  if (ladd_pequals==T){
+    pb[p>=0.001] = paste("p=",pb[p>=0.001],"",sep="")
+    pb[p<0.001] = paste("p<0.001",sep="")
+  }else{
+    pb = paste("",pb,"",sep="")
+  }
+  return(pb)
+}
+
 
 ##################################################################################
 ##################################################################################
@@ -355,6 +379,7 @@ mycolors = function(){
                 ,fit_color="red3"
                 ,background_color="cornsilk"
                 ,notification_color="purple4"
+                ,notification_cex=0.7
                 ,apch=20
                 ,acex=4
                 ,alwd=9
@@ -412,13 +437,30 @@ fit_to_number_incidents_per_day = function(wdat,lover_dispersion=T){
 ##################################################################################
 plot_incidents_over_time=function(zdat
                                  ,myfit
-                                 ,thecolors){
+                                 ,thecolors
+                                 ,lprint=F){
 
-  plot(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=thecolors$apch,ylim=c(0,max(zdat$num+2)))
+  plot(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=thecolors$apch,ylim=c(0,max(zdat$num+3)))
   u <- par("usr")
   rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
   points(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,pch=thecolors$apch)
   lines(myfit$date,myfit$ypred_per_year,col=thecolors$fit_color,lwd=thecolors$alwd)
+  
+  if (lprint){
+    xrange = u[2]-u[1]
+    yrange = u[4]-u[3]
+    xmin = u[1]
+    ymin = u[3]
+    p = myfit$pvalue_percent_rate_inc_per_year
+    #p = return_p_value_string(myfit$pvalue_percent_rate_inc_per_year)
+    add_string = ""
+    if (p<0.05) add_string = "*"
+    if (p<0.01) add_string = "**"
+    if (p<0.001) add_string = "***"
+    x = xmin + 0.01*xrange
+    y = ymin + 0.80*yrange 
+    text(x,y,paste("Increase per year: ",round(myfit$percent_rate_inc_per_year,0),"%",add_string,sep=""),adj=c(0,1),cex=thecolors$notification_cex,col=thecolors$notification_color,font=2)
+  }
 
   return()
 
@@ -468,6 +510,7 @@ fit_to_fraction_involving_banned_weaponry = function(wdat){
 plot_fraction_involving_banned_weaponry = function(zdat
                                                   ,myfit
                                                   ,thecolors
+                                                  ,lprint=F
                                                   ){
 
   plot(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="Fraction involving weaponry banned during FAWB",main="Fraction involving weaponry\n banned during FAWB",pch=thecolors$apch,ylim=c(0,1))
@@ -584,7 +627,7 @@ fit_temporal_trends_casualties = function(temp
   ybeg= mydata$ypred[nrow(mydata)]
   diff = mydata$date[1]-mydata$date[nrow(mydata)]
   frac_increase_killed = exp(log(yend/ybeg)/diff)-1
-  per_increase_killed = (frac_increase_killed)*100
+  per_increase_casualties = (frac_increase_killed)*100
 
  
   return(list(myfit=myfit
@@ -594,7 +637,7 @@ fit_temporal_trends_casualties = function(temp
              ,date=mydata$date
              ,yobs=mydata$yobs
              ,ypred=mydata$ypred
-             ,per_increase_killed=per_increase_killed
+             ,per_increase_casualties=per_increase_casualties
              ,p_value = pvalue
              )
          )
@@ -606,12 +649,29 @@ fit_temporal_trends_casualties = function(temp
 plot_number_casualties_over_time = function(thetable
                                            ,myfit
                                            ,thecolors
+                                           ,lprint=F
                                            ){
   plot(thetable$date,thetable$num_casualties,xlab="Date",ylab="\043 casualties per incident",cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color)
   u <- par("usr")
   rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
   points(thetable$date,thetable$num_casualties,cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color)
   lines(myfit$date,myfit$ypred,col=thecolors$fit_color,lwd=thecolors$alwd)
+
+  if (lprint){
+    xrange = u[2]-u[1]
+    yrange = u[4]-u[3]
+    xmin = u[1]
+    ymin = u[3]
+    p = myfit$p_value
+    add_string = ""
+    if (p<0.05) add_string = "*"
+    if (p<0.01) add_string = "**"
+    if (p<0.001) add_string = "***"
+    x = xmin + 0.01*xrange
+    y = ymin + 0.80*yrange
+    text(x,y,paste("Increase per year: ",round(myfit$per_increase_casualties,0),"%",add_string,sep=""),adj=c(0,1),cex=thecolors$notification_cex,col=thecolors$notification_color,font=2)
+  }
+
 }
 
 

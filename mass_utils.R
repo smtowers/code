@@ -318,7 +318,8 @@ mycolors = function(){
                 ,notification_color="purple4"
                 ,apch=20
                 ,acex=4
-                ,alwd=9)
+                ,alwd=9
+                ,stringsAsFactors=F)
   return(a)
 }
 
@@ -356,13 +357,13 @@ fit_to_number_incidents_per_day = function(wdat,lover_dispersion=T){
 ##################################################################################
 plot_incidents_over_time=function(zdat
                                  ,myfit
-                                 ,mycolors){
+                                 ,thecolors){
 
-  plot(zdat$year,zdat$num,col=mycolors$data_color,cex=mycolors$acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=mycolors$apch,ylim=c(0,max(zdat$num+1)))
+  plot(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=thecolors$apch,ylim=c(0,max(zdat$num+1)))
   u <- par("usr")
-  rect(u[1], u[3], u[2], u[4], col = mycolors$background_color, border = mycolors$background_color)
-  points(zdat$year,zdat$num,col=mycolors$data_color,cex=mycolors$acex,pch=mycolors$apch)
-  lines(myfit$date,myfit$ypred_per_year,col=mycolors$fit_color,lwd=mycolors$alwd)
+  rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
+  points(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,pch=thecolors$apch)
+  lines(myfit$date,myfit$ypred_per_year,col=thecolors$fit_color,lwd=thecolors$alwd)
 
   return()
 
@@ -411,20 +412,20 @@ fit_to_fraction_involving_banned_weaponry = function(wdat){
 ##################################################################################
 plot_fraction_involving_banned_weaponry = function(zdat
                                                   ,myfit
-                                                  ,mycolors
+                                                  ,thecolors
                                                   ){
 
-  plot(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=mycolors$data_color,cex=mycolors$acex,xlab="Date",ylab="Fraction involving weaponry banned during FAWB",main="Fraction involving weaponry\n banned during FAWB",pch=mycolors$apch,ylim=c(0,1))
+  plot(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="Fraction involving weaponry banned during FAWB",main="Fraction involving weaponry\n banned during FAWB",pch=thecolors$apch,ylim=c(0,1))
 
   u <- par("usr")
-  rect(u[1], u[3], u[2], u[4], col = mycolors$background_color, border = mycolors$background_color)
+  rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
 
-  points(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=mycolors$data_color,cex=mycolors$acex,pch=mycolors$apch)
+  points(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=thecolors$data_color,cex=thecolors$acex,pch=thecolors$apch)
 
-  lines(myfit$date,myfit$ypred,col=mycolors$fit_color,lwd=mycolors$alwd)
+  lines(myfit$date,myfit$ypred,col=thecolors$fit_color,lwd=thecolors$alwd)
   if (myfit$ldone==0){
     year_mid = mean(zdat$year)
-    text(year_mid,0.22,"(Note: insufficient data to compare periods before and after FAWB)",cex=1.0,font=2,col=mycolors$notification_color)
+    text(year_mid,0.22,"(Note: insufficient data to compare periods before and after FAWB)",cex=1.0,font=2,col=thecolors$notification_color)
 
   }
 

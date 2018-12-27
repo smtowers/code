@@ -155,6 +155,88 @@ negll_trunc_logseries  = function(par,mylist){
 
 ##################################################################################
 ##################################################################################
+##################################################################################
+
+
+##################################################################################
+##################################################################################
+# read in data from github repository
+##################################################################################
+read_in_data_github = function(input){
+
+  fname = "https://raw.githubusercontent.com/smtowers/data/master/Towers_et_al_public_mass_shootings_Sep_1994_to_Dec_2018.csv"
+  thetable = read.table(fname,header=T,as.is=T,sep=",")
+
+  if (input$excluded_events!=""){
+    a = input$excluded_events
+    vdate = unlist(strsplit(a,";"))
+    for (i in 1:length(vdate)){
+      v = as.numeric(unlist(strsplit(vdate[i],"/")))
+      if (length(v)==3&!is.na(sum(v))){
+        thetable = subset(thetable,!(month==v[1]&day==v[2]&year==v[3]))
+      }
+    }
+  }
+
+  icount = 0
+  if (input$included_events!=""){
+    a = input$included_events
+    vdate = unlist(strsplit(a,";"))
+    for (i in 1:length(vdate)){
+      v = as.numeric(unlist(strsplit(vdate[i],"/")))
+      if (length(v)==3&!is.na(sum(v))){
+        subtable = subset(thetable,(month==v[1]&day==v[2]&year==v[3]))
+        if (icount==0){
+          specially_included_table = subtable
+        }else{
+          specially_included_table = rbind(specially_included_table,subtable)
+        }
+        icount = 1
+      }
+    }
+  }
+
+
+  thetable = subset(thetable,year>=input$year_range[1]&year<=input$year_range[2])
+  if (input$num_casualties=="no_sel"){
+    thetable = subset(thetable,num_gun_fatalities_public>=input$min_num_killed)
+  }else{
+    thetable = subset(thetable,num_shot_public>=input$min_num_killed)
+  }
+
+  #if (input$include_only_meet_definition){
+    thetable = subset(thetable,meet_inclusion_criteria=="Yes")
+  #}
+  if (input$venue=="work"){
+    thetable = subset(thetable,grepl("ork",venue))
+  }
+  if (input$venue=="not_work"){
+    thetable = subset(thetable,!grepl("ork",venue))
+  }
+  if (input$venue=="school"){
+    thetable = subset(thetable,grepl("chool",venue))
+  }
+  if (input$venue=="public"){
+    thetable = subset(thetable,!grepl("chool",venue)&!grepl("ork",venue))
+  }
+  if (input$perp_knew_victims=="all_or_some"){
+    thetable = subset(thetable,public_victims_knew_perp=="Yes"|public_victims_knew_perp=="Partly")
+  }
+  if (input$perp_knew_victims=="none"){
+    thetable = subset(thetable,public_victims_knew_perp=="No")
+  }
+
+  #######################################################################
+  # include the specifically included events
+  #######################################################################
+  if (icount>0) thetable = rbind(thetable,specially_included_table)
+
+   return(thetable)
+}
+
+
+##################################################################################
+##################################################################################
 # aggregate data by day
 ##################################################################################
 aggregate_data_by_day = function(thetable,year_min,year_max){
@@ -230,45 +312,64 @@ aggregate_data_by_year=function(thetable,year_min,year_max,wdat){
 ##################################################################################
 # fit to number of incidents per day
 ##################################################################################
-fit_to_number_incidents_per_day = function(wdat,lover_dispersion){
-  mylog=capture.output({pois_pop <- glm(num~offset(log(population)),family="poisson",data=wdat)})
-  mylog=capture.output({pois_pop_time <- glm(num~offset(log(population))+x,family="poisson",data=wdat)})
-  mylog=capture.output({pois_pop_time_ban <- glm(num~offset(log(population))+x+xb,family="poisson",data=wdat)})
-  inc_per_year = pois_pop_time$coef[2]*365.25
-  p_pop_time=summary(pois_pop_time)$coef[2,4]
-  p_pop_time_ban1=summary(pois_pop_time_ban)$coef[2,4]
-  p_pop_time_ban2=summary(pois_pop_time_ban)$coef[3,4]
-  y_pop_time = predict(pois_pop_time,type="response")
+fit_to_number_incidents_per_day = function(wdat,lover_dispersion=T){
 
   if (lover_dispersion){
-    mylog=capture.output({negbinom_pop <- gamlss(num~offset(log(population)),family=NBI,data=wdat)})
-    mylog=capture.output({negbinom_pop_time <- gamlss(num~offset(log(population))+x,family=NBI,data=wdat)})
-    mylog=capture.output({negbinom_pop_time_ban <- gamlss(num~offset(log(population))+x+xb,family=NBI,data=wdat)})
-    sfit=summary(negbinom_pop_time, save=TRUE)
-    p_pop_time=sfit$mu.coef.table[2,4]
+    #mylog=capture.output({fit_pop <- gamlss(num~offset(log(population)),family=NBI,data=wdat)})
+    mylog=capture.output({fit_pop_time <- gamlss(num~offset(log(population))+x,family=NBI,data=wdat)})
+    #mylog=capture.output({fit_pop_time_ban <- gamlss(num~offset(log(population))+x+xb,family=NBI,data=wdat)})
+    sfit=summary(fit_pop_time, save=TRUE)
     inc_per_year = sfit$mu.coef.table[2,1]*365.25
-    sfit=summary(negbinom_pop_time_ban, save=TRUE)
-    p_pop_time_ban1=sfit$mu.coef.table[2,4]
-    p_pop_time_ban2=sfit$mu.coef.table[3,4]
-    y_pop_time = predict(negbinom_pop_time,type="response")
-  }
-  #diff_time = (max(wdat$x)-min(wdat$x))/365.25
-  #ybeg = y_pop_time[which.min(wdat$x)]
-  #yend = y_pop_time[which.max(wdat$x)]
-  #rate_inc = exp(log(yend/ybeg)/diff_time)-1
-  rate_inc = (exp(inc_per_year)-1)
+    p_pop_time=sfit$mu.coef.table[2,4]
 
-  return(list(rate_inc=rate_inc
+    #sfit=summary(fit_pop_time_ban, save=TRUE)
+    #p_pop_time_ban1=sfit$mu.coef.table[2,4]
+    #p_pop_time_ban2=sfit$mu.coef.table[3,4]
+  }else{
+    #mylog=capture.output({fit_pop <- glm(num~offset(log(population)),family="poisson",data=wdat)})
+    mylog=capture.output({fit_pop_time <- glm(num~offset(log(population))+x,family="poisson",data=wdat)})
+    #mylog=capture.output({fit_pop_time_ban <- glm(num~offset(log(population))+x+xb,family="poisson",data=wdat)})
+    inc_per_year = fit_pop_time$coef[2]*365.25
+    p_pop_time=summary(fit_pop_time)$coef[2,4]
+
+    #p_pop_time_ban1=summary(fit_pop_time_ban)$coef[2,4]
+    #p_pop_time_ban2=summary(fit_pop_time_ban)$coef[3,4]
+  }
+  percent_rate_inc_per_year = ((exp(inc_per_year)-1))*100
+  ypred_per_year = 365.25*predict(fit_pop_time,type="response")
+
+  return(list(percent_rate_inc_per_year=percent_rate_inc_per_year
+             ,ypred_per_year=ypred_per_year
+             #,fit_pop=fit_pop
+             ,fit_pop_time=fit_pop_time
+             #,fit_pop_time_ban=fit_pop_time_ban
              ,p_pop_time=p_pop_time
-             ,pois_pop=pois_pop
-             ,pois_pop_time=pois_pop_time
-             ,pois_pop_time_ban=pois_pop_time_ban
-             ,negbinom_pop=negbinom_pop
-             ,negbinom_pop_time=negbinom_pop_time
-             ,negbinom_pop_time_ban=negbinom_pop_time_ban))
+             ,date=wdat$date
+             ))
 
 }
 
+##################################################################################
+##################################################################################
+# plot number of incidents over time
+##################################################################################
+plot_incidents_over_time=function(zdat
+                                 ,myfit
+                                 ,data_color
+                                 ,fit_color
+                                 ,background_color
+                                 ,acex
+                                 ,alwd){
+
+  plot(zdat$year,zdat$num,col=data_color,cex=acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=20,ylim=c(0,max(zdat$num+1)))
+  u <- par("usr")
+  rect(u[1], u[3], u[2], u[4], col = background_color, border = background_color)
+  points(zdat$year,zdat$num,col=data_color,cex=acex,pch=20)
+  lines(myfit$date,myfit$ypred_per_year,col=fit_color,lwd=alwd)
+
+  return()
+
+}
 
 ##################################################################################
 ##################################################################################

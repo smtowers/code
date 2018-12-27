@@ -352,14 +352,28 @@ mycolors = function(){
 fit_to_number_incidents_per_day = function(wdat,lover_dispersion=T){
 
   if (lover_dispersion){
-    #mylog=capture.output({fit_pop_time = gamlss(num~offset(log(population))+x,family=NBI,data=wdat,control=gamlss.control(trace=F),trace=F)})
-    mylog=shut_up({fit_pop_time = try(gamlss(num~offset(log(population))+x,family=NBI,data=wdat,control=gamlss.control(trace=F),trace=F),silent=T)})
-    sfit=summary(fit_pop_time, save=TRUE)
-    inc_per_year = sfit$mu.coef.table[2,1]*365.25
-    p_pop_time=sfit$mu.coef.table[2,4]
+    ##############################################################################
+    # for non-overdispersed data, Negative Binomial fit has difficulty fitting
+    # for over-dispersion coefficient, and covariance matrix from fit
+    # is not trustworthy
+    # If the AIC of the Negative Binomial fit is greater than that of a Poisson
+    # likelihood fit, over-dispersion is not an issue, and the Poisson likelihood
+    # is preferred.
+    ##############################################################################
+    options(warn=(-1))
+    mylog=capture.output({fit_pop_time = suppressWarnings(gamlss(num~offset(log(population))+x,family=NBI,data=wdat,control=gamlss.control(trace=F),trace=F))})
+    mylog=capture.output({fit_pop_time_pois = glm(num~offset(log(population))+x,family="poisson",data=wdat)})
+    options(warn=0)
+    if (AIC(fit_pop_time)<AIC(fit_pop_time_pois)){
+      sfit=summary(fit_pop_time, save=TRUE)
+      inc_per_year = sfit$mu.coef.table[2,1]*365.25
+      p_pop_time=sfit$mu.coef.table[2,4]
+    }else{
+      inc_per_year = fit_pop_time_pois$coef[2]*365.25
+      p_pop_time=summary(fit_pop_time_pois)$coef[2,4]
+    }
   }else{
-    #mylog=capture.output({fit_pop_time = glm(num~offset(log(population))+x,family="poisson",data=wdat)})
-    mylog=shut_up({fit_pop_time = glm(num~offset(log(population))+x,family="poisson",data=wdat)})
+    mylog=capture.output({fit_pop_time = glm(num~offset(log(population))+x,family="poisson",data=wdat)})
     inc_per_year = fit_pop_time$coef[2]*365.25
     p_pop_time=summary(fit_pop_time)$coef[2,4]
   }
@@ -383,7 +397,7 @@ plot_incidents_over_time=function(zdat
                                  ,myfit
                                  ,thecolors){
 
-  plot(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=thecolors$apch,ylim=c(0,max(zdat$num+1)))
+  plot(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=thecolors$apch,ylim=c(0,max(zdat$num+2)))
   u <- par("usr")
   rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
   points(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,pch=thecolors$apch)
@@ -507,7 +521,7 @@ fit_temporal_trends_casualties = function(temp
     if (lfit==6) npar = 4
     if (lfit==7) npar = 4
 
-    mylog=shut_up({r = optim(par=rep(0.1,(npar+1)),fn=negll_trunc_negbinom,hessian=T,mylist=mylist,control=list(maxit=1000))})
+    mylog=capture.output({r = optim(par=rep(0.1,(npar+1)),fn=negll_trunc_negbinom,hessian=T,mylist=mylist,control=list(maxit=1000))})
     vlike = c(vlike,r$value)
     A = solve(r$hessian)
     myfit[[lfit]] = r
@@ -517,7 +531,7 @@ fit_temporal_trends_casualties = function(temp
     }
 
     if (0){
-      mylog=shut_up({rb = optim(par=rep(0,npar),fn=negll_trunc_logseries,hessian=T,mylist=mylist,control=list(maxit=1000))})
+      mylog=capture.output({rb = optim(par=rep(0,npar),fn=negll_trunc_logseries,hessian=T,mylist=mylist,control=list(maxit=1000))})
       vlikeb = c(vlikeb,rb$value)
       Ab = solve(rb$hessian)
       myfitb[[lfit]] = rb

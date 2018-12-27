@@ -652,11 +652,12 @@ fit_temporal_trends_casualties = function(temp
 ##################################################################################
 plot_number_casualties_over_time = function(thetable
                                            ,myfit
+                                           ,input
                                            ,thecolors
                                            ,lprint=F
                                            ){
 
-  plot(thetable$date,thetable$num_casualties,xlab="Date",ylab="\043 casualties per incident",cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color,ylim=c(0,max(thetable$num_casualties+5)))
+  plot(thetable$date,thetable$num_casualties,xlab="Date",ylab="\043 casualties per incident",cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color,ylim=c(0,max(thetable$num_casualties+5)),xlim=input$year_range)
 
   u <- par("usr")
   rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)

@@ -23,8 +23,9 @@ if (0){
 return_p_value_string = function(p,ladd_pequals=T){
   pb = round(p,3)
   pb[p>=0.10] = as.character(round(p[p>=0.10],2))
+  pb[p>=0.30] = as.character(round(p[p>=0.30],1))
   l = which(p>=0.99&nchar(pb)==1)
-  pb[l] = paste("1.00",sep="")
+  pb[l] = paste("1.0",sep="")
   l = which(p>=0.10&nchar(pb)==3)
   pb[l] = paste(pb[l],"0",sep="")
   l = which(p<0.10&p>0.001&nchar(pb)==4)
@@ -101,7 +102,7 @@ dtrunc_negbinom=function(yobs,mu,alpha,truncation){
 # calcuate the expected value of mu for the negative binomial distribution
 ##################################################################################
 negbinom_fun  = function(par,mylist){
-  data = mylist[[1]]
+  data = (mylist[[1]])
   trunc = mylist[[2]]
   lfit = mylist[[3]]
 
@@ -112,6 +113,9 @@ negbinom_fun  = function(par,mylist){
   if (lfit==5) r = par[2]+par[3]*data$dateb+par[4]*data$banned
   if (lfit==6) r = par[2]+par[3]*data$dateb+par[4]*data$hcsap+par[5]*data$assault
   if (lfit==7) r = par[2]+par[3]*data$dateb+par[4]*data$banned+par[5]*data$none
+  if (lfit==8) r = par[2]+par[3]*data$only_pistol+par[4]*data$only_rifle+par[5]*data$pistol_and_rifle
+  #cat(lfit,"  ",data[1,],"  ",r,"\n")
+  #cat(lfit,r,"\n")
   p = exp(r)
   return(p)
 }
@@ -229,6 +233,10 @@ read_in_data_github = function(input){
 
   fname = "https://raw.githubusercontent.com/smtowers/data/master/Towers_et_al_public_mass_shootings_Sep_1994_to_Dec_2018.csv"
   thetable = read.table(fname,header=T,as.is=T,sep=",")
+  return(thetable)
+}
+
+select_data = function(thetable,input){
 
   if (input$excluded_events!=""){
     a = input$excluded_events
@@ -379,10 +387,16 @@ mycolors = function(){
                 ,fit_color="red3"
                 ,background_color="cornsilk"
                 ,notification_color="purple4"
+                ,alternate_color1="deepskyblue4"
+                ,alternate_color2="darkgreen"
+                #,alternate_color3="magenta3"
+                ,alternate_color3="darkorange2"
                 ,notification_cex=1.2
                 ,apch=20
                 ,acex=4
                 ,alwd=9
+                ,cex_lab=1.5
+                ,cex_main=1.5
                 ,stringsAsFactors=F)
   return(a)
 }
@@ -440,8 +454,8 @@ plot_incidents_over_time=function(zdat
                                  ,thecolors
                                  ,lprint=F){
 
-  plot(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=thecolors$apch,ylim=c(0,max(zdat$num+3)))
-  u <- par("usr")
+  plot(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="\043 incidents per year",main="\043 incidents per year",pch=thecolors$apch,ylim=c(0,max(zdat$num+3)),cex.lab=thecolors$cex_lab,cex.main=thecolors$cex_main)
+  u = par("usr")
   rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
   points(zdat$year,zdat$num,col=thecolors$data_color,cex=thecolors$acex,pch=thecolors$apch)
   lines(myfit$date,myfit$ypred_per_year,col=thecolors$fit_color,lwd=thecolors$alwd)
@@ -458,7 +472,7 @@ plot_incidents_over_time=function(zdat
     #if (p<0.001) add_string = "***"
     x = xmin + 0.05*xrange
     y = ymin + 0.80*yrange 
-    text(x,y,paste("Increase per year: ",round(myfit$percent_rate_inc_per_year,0),"%",add_string,sep=""),adj=c(0,1),cex=thecolors$notification_cex,col=thecolors$notification_color,font=2)
+    text(x,y,paste("Percentage increase per year: ",round(myfit$percent_rate_inc_per_year,0),"%",add_string,sep=""),adj=c(0,1),cex=thecolors$notification_cex,col=thecolors$notification_color,font=2)
 
     p = return_p_value_string(myfit$pvalue_percent_rate_inc_per_year)
     y = ymin + 0.75*yrange 
@@ -512,11 +526,53 @@ fit_to_fraction_involving_banned_weaponry = function(wdat){
 # plot fraction involving FAWB banned weaponry before and after ban
 ##################################################################################
 plot_fraction_involving_banned_weaponry = function(zdat
+                                                  ,wdat
                                                   ,myfit
                                                   ,thecolors
                                                   ,lprint=F
                                                   ){
 
+  
+  wdat$ban = rep(0,nrow(wdat))
+  wdat$ban[wdat$xb>0] = 1
+
+  plot(1,1,xlim=c(-1.0,2.0),ylim=c(0,100),xlab="",ylab="Percentage involving weaponry banned during FAWB",col=0,main="Percentage involving weaponry banned during\n Federal Assault Weapons Ban (FAWB)",xaxt="n",cex.main=thecolors$cex_main,cex.lab=thecolors$cex_lab,yaxs="i")
+  u = par("usr")
+  rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
+
+  i = which(wdat$ban==0)
+  f1 =sum(wdat$num_FAWB_weapon_involved[i])/sum(wdat$num_known_if_FAWB_weapon_involved[i])
+  ib = which(wdat$ban==1)
+  f2 =sum(wdat$num_FAWB_weapon_involved[ib])/sum(wdat$num_known_if_FAWB_weapon_involved[ib])
+  f = c(f1,f2)*100
+  acol = thecolors$alternate_color1
+  #acol = c(acol,thecolors$notification_color)
+  acol = c(acol,thecolors$alternate_color3)
+
+  p = return_p_value_string(myfit$pvalue_increase_prob)
+  for (j in 1:2){
+    x1 = (j-1)-0.5
+    x2 = (j-1)+0.5
+    y1 = 0
+    y2 = f[j]
+    rect(x1,y1,x2,y2
+        ,col=acol[j]
+        ,border=acol[j]
+        )
+  }
+  adiff = round(f[2]-f[1],0)
+  if (!is.na(adiff)){
+    if (adiff>0) adiff = paste("+",adiff,sep="")
+    text(0.5,95,paste("Change after lapse of FAWB=",adiff,"% (",p,")",sep=""),font=2,cex=thecolors$notification_cex)
+  }
+  wname = paste("During\n FAWB\n","(N=",sum(wdat$num_known_if_FAWB_weapon_involved[i]),")",sep="")
+  wname = c(wname,paste("After\n Lapse\n FAWB\n (N=",sum(wdat$num_known_if_FAWB_weapon_involved[ib]),")",sep=""))
+  axis(1,las=2,labels=wname,at=seq(0,1),cex.axis=thecolors$cex_lab,cex.lab=thecolors$cex_lab)
+
+
+
+
+  if (0){
   plot(zdat$year,zdat$num_FAWB_weapon_involved/zdat$num_known_if_FAWB_weapon_involved,col=thecolors$data_color,cex=thecolors$acex,xlab="Date",ylab="Fraction involving weaponry banned during FAWB",main="Fraction involving weaponry\n banned during FAWB",pch=thecolors$apch,ylim=c(0,1))
 
   u <- par("usr")
@@ -529,6 +585,7 @@ plot_fraction_involving_banned_weaponry = function(zdat
     year_mid = mean(zdat$year)
     text(year_mid,0.22,"(Note: insufficient data to compare periods before and after FAWB)",cex=1.0,font=2,col=thecolors$notification_color)
 
+  }
   }
 
 }
@@ -657,12 +714,21 @@ plot_number_casualties_over_time = function(thetable
                                            ,lprint=F
                                            ){
 
-  plot(thetable$date,thetable$num_casualties,xlab="Date",ylab="\043 casualties per incident",cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color,ylim=c(0,max(thetable$num_casualties+5)),xlim=c(input$year_range[1],(input$year_range[2]+1)))
+  xmin = input$year_range[1]
+  xmax = input$year_range[2]+1
+  plot(thetable$date,thetable$num_casualties,xlab="Date",ylab="\043 casualties per incident",cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color,ylim=c(0,max(thetable$num_casualties+5)),xlim=c(xmin,xmax),main="\043 casualties per incident over time",cex.lab=thecolors$cex_lab,cex.main=thecolors$cex_main)
 
   u <- par("usr")
   rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
   points(thetable$date,thetable$num_casualties,cex=thecolors$acex,pch=thecolors$apch,col=thecolors$data_color)
-  lines(myfit$date,myfit$ypred,col=thecolors$fit_color,lwd=thecolors$alwd)
+  #lines(myfit$date,myfit$ypred,col=thecolors$fit_color,lwd=thecolors$alwd)
+  i = order(myfit$date)
+  a = smooth.spline(myfit$date[i],myfit$ypred[i],all.knots=T,df=length(myfit$date))
+  x = seq(xmin,xmax,length=100)
+  b = predict(a,x)
+  lines(b$x,b$y,col=thecolors$fit_color,lwd=thecolors$alwd)
+  #lines(b$x,b$y,col="blue",lwd=2)
+
 
   if (lprint){
     xrange = u[2]-u[1]
@@ -676,7 +742,7 @@ plot_number_casualties_over_time = function(thetable
     #if (p<0.001) add_string = "***"
     x = xmin + 0.05*xrange
     y = ymin + 0.80*yrange
-    text(x,y,paste("Increase per year: ",round(myfit$per_increase_casualties,0),"%",add_string,sep=""),adj=c(0,1),cex=thecolors$notification_cex,col=thecolors$notification_color,font=2)
+    text(x,y,paste("Percentage increase per year: ",round(myfit$per_increase_casualties,0),"%",add_string,sep=""),adj=c(0,1),cex=thecolors$notification_cex,col=thecolors$notification_color,font=2)
 
     p = return_p_value_string(myfit$p_value)
     y = ymin + 0.75*yrange 
@@ -685,6 +751,357 @@ plot_number_casualties_over_time = function(thetable
   }
 
 }
+
+
+##################################################################################
+##################################################################################
+##################################################################################
+violin_plot_casualties = function(thetable
+                                  ,thecolors
+                                  ,lprint=F
+                                  ){
+
+  m = subset(thetable,known_if_high_capacity_involved_or_not==1)
+  m$x = m$num_casualties
+
+  m$lperiod = rep(0,nrow(m))
+  m$lperiodb = rep(0,nrow(m))
+  i = which(m$involved_FAWB_banned_firearm==0)
+  m$lperiod[i] = 0
+  i = which(m$involved_FAWB_banned_firearm==1)
+  m$lperiod[i] = 1
+  i = which(m$involved_FAWB_banned_firearm==1&m$involved_high_capacity_handgun==0&m$involved_assault_rifle==1)
+  m$lperiodb[i] = 2
+  i = which(m$involved_FAWB_banned_firearm==1&m$involved_high_capacity_handgun==1&m$involved_assault_rifle==0)
+  m$lperiodb[i] = 3
+
+  plot(1,1,xlim=c(-0.5,3.5),ylim=c(0,max(m$x+5)),xlab="",ylab="Distribution \043 casualties per incident\n (bar width represents \043 incidents w/ that many casualties)",col=0,main="Distribution \043 casualties per incident",xaxt="n",cex.main=thecolors$cex_main,cex.lab=thecolors$cex_lab,yaxs="i")
+  u = par("usr")
+  rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
+  lcustom_h = 1
+  if (lcustom_h){
+    ah = 0.5
+    vioplot(m$x[m$lperiod==0],at=0,add=T,col=thecolors$fit_color,h=ah,wex=0.1)
+    vioplot(m$x[m$lperiodb==3],at=1,add=T,col=thecolors$alternate_color2,h=ah)
+    vioplot(m$x[m$lperiod==1],at=2,add=T,col=thecolors$notification_color,h=ah)
+    vioplot(m$x[m$lperiodb==2],at=3,add=T,col=thecolors$alternate_color1,h=ah)
+  }else{
+    vioplot(m$x[m$lperiod==0],at=0,add=T,col=thecolors$fit_color)
+    vioplot(m$x[m$lperiodb==3],at=1,add=T,col=thecolors$alternate_color2)
+    vioplot(m$x[m$lperiod==1],at=2,add=T,col=thecolors$notification_color)
+    vioplot(m$x[m$lperiodb==2],at=3,add=T,col=thecolors$alternate_color1)
+  }
+  vname = "No banned weaponry"
+  vname = c(vname,"High-capacity pistol")
+  vname = c(vname,"High-capacity rifle")
+  vname = c(vname,"Any banned weaponry")
+  acol = character(0)
+  acol = c(acol,thecolors$fit_color)
+  acol = c(acol,thecolors$alternate_color1)
+  acol = c(acol,thecolors$notification_color)
+  acol = c(acol,thecolors$alternate_color2)
+  legend("topleft",legend=vname,col=acol,lwd=7,bty="n",cex=1.0)
+  #axis(1,las=2,labels=vname,at=seq(0,3),cex.axis=0.8)
+}
+
+##################################################################################
+##################################################################################
+##################################################################################
+battleship_plot_casualties = function(thetable
+                                     ,thecolors
+                                     ,input
+                                     ,lprint=F
+                                     ){
+
+  m = subset(thetable,known_if_high_capacity_involved_or_not==1)
+  m$y = m$num_casualties
+
+  ################################################################################
+  ################################################################################
+  ################################################################################
+  m$only_pistol = rep(0,nrow(m))
+  m$only_rifle = rep(0,nrow(m))
+  m$pistol_and_rifle = rep(0,nrow(m))
+  m$none_involved = rep(0,nrow(m))
+  m$any = rep(0,nrow(m))
+
+  m$none_involved[m$involved_FAWB_banned_firearm==0] = 1
+  m$only_pistol[m$involved_FAWB_banned_firearm==1&
+                m$involved_high_capacity_handgun==1&
+                m$involved_assault_rifle==0] = 1
+  m$only_rifle[m$involved_FAWB_banned_firearm==1&
+               m$involved_high_capacity_handgun==0&
+               m$involved_assault_rifle==1] = 1
+  m$pistol_and_rifle[m$involved_FAWB_banned_firearm==1&
+                     m$involved_high_capacity_handgun==1&
+                     m$involved_assault_rifle==1] = 1
+  m$any[m$involved_FAWB_banned_firearm==1] = 1
+
+  vres = numeric(0)
+  evres = numeric(0)
+  vp = numeric(0)
+  viter = numeric(0)
+  for (iter in 1:5){
+    mydata = data.frame(only_pistol = m$only_pistol
+                       ,only_rifle = m$only_rifle
+                       ,pistol_and_rifle = m$pistol_and_rifle
+                       ,yobs=m$y
+                       )
+    if (iter==1) mydata = subset(mydata,only_pistol==0&only_rifle==0&pistol_and_rifle==0)
+    if (iter==1) mydata_null = mydata
+    if (iter==2) mydata = subset(mydata,only_pistol==1&only_rifle==0&pistol_and_rifle==0)
+    if (iter==3) mydata = subset(mydata,only_pistol==0&only_rifle==1&pistol_and_rifle==0)
+    if (iter==4) mydata = subset(mydata,only_pistol==0&only_rifle==0&pistol_and_rifle==1)
+    if (iter==5) mydata = subset(mydata,only_pistol==1|only_rifle==1|pistol_and_rifle==1)
+
+    mylist = list()
+    mylist[[1]] = mydata
+    mylist[[2]] = input$min_num_casualties
+    mylist[[3]] = 1 # type of fit
+    npar = 2
+  
+    if (nrow(mydata)>1){
+      #if (lfit==8) r = par[2]+par[3]*data$only_pistol+par[4]*data$only_rifle+par[5]*data$pistol_and_rifle
+      #mylog=capture.output({r = optim(par=rep(0.1,npar),fn=negll_trunc_negbinom,hessian=T,mylist=mylist,control=list(maxit=1000))})
+      #mydata$mu = negbinom_fun(r$par,mylist)
+    
+      #negll_trunc_logseries(rep(0.1,(npar-1)),mylist)
+      mylog=capture.output({r = optim(par=rep(0.1,(npar-1)),fn=negll_trunc_logseries,hessian=T,mylist=mylist,control=list(maxit=1000),method="Brent",lower=(0),upper=(+20))})
+      #mylog=capture.output({r = optimize(f=negll_trunc_logseries,mylist=mylist,lower=(-0),upper=(+10))})
+      A = solve(r$hessian)
+      mydata$mu = logseries_fun(r$par,mylist)
+      vres = c(vres,r$par[1])
+      evres = c(evres,sqrt(A[1,1]))
+      viter = c(viter,iter)
+      #a = ks.test(mydata$yobs,mydata_null$yobs,alternative="less")
+      #vp = c(vp,a$p.value)
+    }
+  }
+  z = (vres-vres[viter==1])/sqrt(evres^2+evres[viter==1]^2)
+  p = 1-pchisq(z^2,1)
+  p = return_p_value_string(p)
+  if (length(p)>0) vp = return_p_value_string(vp)
+
+  ################################################################################
+  ################################################################################
+  ################################################################################
+  breaks = seq((input$min_num_casualties-0.5),max(m$y+0.5),1)
+  a = hist(m$y[m$none_involved==1],plot=F,breaks=breaks)
+  b = hist(m$y[m$only_pistol==1],plot=F,breaks=breaks)
+  c = hist(m$y[m$only_rifle==1],plot=F,breaks=breaks)
+  d = hist(m$y[m$pistol_and_rifle==1],plot=F,breaks=breaks)
+  e = hist(m$y[m$any==1],plot=F,breaks=breaks)
+  vN = c(sum(a$counts),sum(b$counts),sum(c$counts),sum(d$counts),sum(e$counts))
+  vN = paste("(N=",vN,")",sep="")
+  lmax = rep(0,4)
+  if (sum(a$counts)>0) lmax[1] = max(breaks[which(a$counts>0)])
+  if (sum(b$counts)>0) lmax[2] = max(breaks[which(b$counts>0)])
+  if (sum(c$counts)>0) lmax[3] = max(breaks[which(c$counts>0)])
+  if (sum(d$counts)>0) lmax[4] = max(breaks[which(d$counts>0)])
+  if (sum(e$counts)>0) lmax[5] = max(breaks[which(e$counts>0)])
+  ymax = max(c(a$counts,b$counts,c$counts,d$counts,e$counts))
+  a$counts = 0.90*a$counts/ymax
+  b$counts = 0.90*b$counts/ymax
+  c$counts = 0.90*c$counts/ymax
+  d$counts = 0.90*d$counts/ymax
+  e$counts = 0.90*e$counts/ymax
+
+  acol = character(0)
+  acol = c(acol,thecolors$fit_color)
+  acol = c(acol,thecolors$alternate_color1)
+  acol = c(acol,thecolors$notification_color)
+  acol = c(acol,thecolors$alternate_color2)
+  acol = c(acol,thecolors$alternate_color3)
+
+  shift = 0.35*max(m$y)
+  bshift = 0.05*max(m$y)
+  if (shift<5) shift=5
+  if (bshift<2) bshift=2
+  #cat(shift,bshift,"\n")
+  plot(1,1,xlim=c(-0.5,4.5),ylim=c((input$min_num_casualties-0.0),max(m$y+shift)),xlab="",ylab="Distribution \043 casualties per incident\n (width of bars represents \043 of incidents w/ that many casualties)",col=0,main="Distribution \043 casualties per incident\n and dependence on use of FAWB banned weaponry",xaxt="n",cex.main=thecolors$cex_main,cex.lab=thecolors$cex_lab,yaxs="i")
+  u = par("usr")
+  rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
+
+  for (j in 1:5){
+    if (j==1) temp=a
+    if (j==2) temp=b
+    if (j==3) temp=c
+    if (j==4) temp=d
+    if (j==5) temp=e
+    amax = lmax[j]+0.5
+    mycol = acol[j]
+    lapply(seq(1,length(a$mids))
+     ,function(i,amax,temp,mycol){
+        if (temp$counts[i]>=0&temp$mids[i]<=amax){
+          rect((j-1)-0.5*temp$counts[i]
+              ,temp$mids[i]
+              ,(j-1)+0.5*temp$counts[i]
+              ,temp$mids[i]+1.0
+              ,col=mycol
+              ,border=mycol
+              )
+        }
+      }
+     ,amax=amax,temp=temp,mycol=mycol)
+    if (j>1&sum(viter==j)==1){
+      text((j-1),lmax[j]+bshift,p[viter==j])
+    }
+  }
+
+  vname = "No banned weaponry"
+  vname = c(vname,"High-capacity pistol")
+  vname = c(vname,"High-capacity rifle")
+  vname = c(vname,"High-capacity pistol and rifle")
+  vname = c(vname,"Any banned high-capacity (including shotguns)")
+  
+  legend("topleft",legend=vname,col=acol,lwd=7,bty="n",cex=1.0)
+  wname = paste("No\n banned\n weaponry\n",vN[1])
+  wname = c(wname,paste("High-cap\n Pistol\n",vN[2]))
+  wname = c(wname,paste("High-cap\n Rifle\n",vN[3]))
+  wname = c(wname,paste("High-cap\n Pistol and\n Rifle\n",vN[4]))
+  wname = c(wname,paste("Any\n banned\n",vN[5]))
+  axis(1,las=2,labels=wname,at=seq(0,4),cex.axis=1.2)
+
+  return()
+
+}
+
+##################################################################################
+##################################################################################
+##################################################################################
+histogram_plot_casualties = function(thetable
+                                    ,thecolors
+                                    ,input
+                                    ,lprint=F
+                                    ){
+
+  m = subset(thetable,known_if_high_capacity_involved_or_not==1)
+  m$y = m$num_casualties
+
+  ################################################################################
+  ################################################################################
+  ################################################################################
+  m$only_pistol = rep(0,nrow(m))
+  m$only_rifle = rep(0,nrow(m))
+  m$pistol_and_rifle = rep(0,nrow(m))
+  m$none_involved = rep(0,nrow(m))
+  m$any = rep(0,nrow(m))
+
+  m$none_involved[m$involved_FAWB_banned_firearm==0] = 1
+  m$only_pistol[m$involved_FAWB_banned_firearm==1&
+                m$involved_high_capacity_handgun==1&
+                m$involved_assault_rifle==0] = 1
+  m$only_rifle[m$involved_FAWB_banned_firearm==1&
+               m$involved_high_capacity_handgun==0&
+               m$involved_assault_rifle==1] = 1
+  m$pistol_and_rifle[m$involved_FAWB_banned_firearm==1&
+                     m$involved_high_capacity_handgun==1&
+                     m$involved_assault_rifle==1] = 1
+  m$any[m$involved_FAWB_banned_firearm==1] = 1
+
+  vres = numeric(0)
+  evres = numeric(0)
+  vp = numeric(0)
+  viter = numeric(0)
+  for (iter in 1:5){
+    mydata = data.frame(only_pistol = m$only_pistol
+                       ,only_rifle = m$only_rifle
+                       ,pistol_and_rifle = m$pistol_and_rifle
+                       ,yobs=m$y
+                       )
+    if (iter==1) mydata = subset(mydata,only_pistol==0&only_rifle==0&pistol_and_rifle==0)
+    if (iter==1) mydata_null = mydata
+    if (iter==2) mydata = subset(mydata,only_pistol==1&only_rifle==0&pistol_and_rifle==0)
+    if (iter==3) mydata = subset(mydata,only_pistol==0&only_rifle==1&pistol_and_rifle==0)
+    if (iter==4) mydata = subset(mydata,only_pistol==0&only_rifle==0&pistol_and_rifle==1)
+    if (iter==5) mydata = subset(mydata,only_pistol==1|only_rifle==1|pistol_and_rifle==1)
+
+    mylist = list()
+    mylist[[1]] = mydata
+    mylist[[2]] = input$min_num_casualties
+    mylist[[3]] = 1 # type of fit
+    npar = 2
+  
+    if (nrow(mydata)>1){
+      #if (lfit==8) r = par[2]+par[3]*data$only_pistol+par[4]*data$only_rifle+par[5]*data$pistol_and_rifle
+      #mylog=capture.output({r = optim(par=rep(0.1,npar),fn=negll_trunc_negbinom,hessian=T,mylist=mylist,control=list(maxit=1000))})
+      #mydata$mu = negbinom_fun(r$par,mylist)
+    
+      #negll_trunc_logseries(rep(0.1,(npar-1)),mylist)
+      mylog=capture.output({r = optim(par=rep(0.1,(npar-1)),fn=negll_trunc_logseries,hessian=T,mylist=mylist,control=list(maxit=1000),method="Brent",lower=(0),upper=(+20))})
+      #mylog=capture.output({r = optimize(f=negll_trunc_logseries,mylist=mylist,lower=(-0),upper=(+10))})
+      A = solve(r$hessian)
+      mydata$mu = logseries_fun(r$par,mylist)
+      vres = c(vres,r$par[1])
+      evres = c(evres,sqrt(A[1,1]))
+      viter = c(viter,iter)
+      a = ks.test(mydata$yobs,mydata_null$yobs,alternative="less")
+      vp = c(vp,a$p.value)
+    }
+  }
+  z = (vres-vres[viter==1])/sqrt(evres^2+evres[viter==1]^2)
+  p = 1-pchisq(z^2,1)
+  p = return_p_value_string(p)
+  vp = return_p_value_string(vp)
+
+  ################################################################################
+  ################################################################################
+  ################################################################################
+  breaks = seq((input$min_num_casualties+0.5),max(m$y+0.5),1)
+  a = hist(m$y[m$none_involved==1],plot=F,breaks=breaks,freq=T)
+  b = hist(m$y[m$only_pistol==1],plot=F,breaks=breaks,freq=T)
+  c = hist(m$y[m$only_rifle==1],plot=F,breaks=breaks,freq=T)
+  d = hist(m$y[m$pistol_and_rifle==1],plot=F,breaks=breaks,freq=T)
+  e = hist(m$y[m$any==1],plot=F,breaks=breaks,freq=T)
+  vN = c(sum(a$counts),sum(b$counts),sum(c$counts),sum(d$counts),sum(e$counts))
+  vN = paste("(N=",vN,")",sep="")
+
+  a$counts = 1.00*a$counts/sum(a$counts)
+  b$counts = 1.00*b$counts/sum(b$counts)
+  c$counts = 1.00*c$counts/sum(c$counts)
+  d$counts = 1.00*d$counts/sum(d$counts)
+  e$counts = 1.00*e$counts/sum(e$counts)
+
+  acol = character(0)
+  acol = c(acol,thecolors$fit_color)
+  acol = c(acol,thecolors$alternate_color1)
+  acol = c(acol,thecolors$notification_color)
+  acol = c(acol,thecolors$alternate_color2)
+  acol = c(acol,thecolors$alternate_color3)
+
+  bcol = character(0)
+  for (i in 1:length(acol)){
+    mycol=rgb(t(col2rgb(acol[i])),max=255,alpha=125)
+    bcol = c(bcol,mycol)
+  }
+  bcol = acol
+  plot(a$mids,a$counts,col=bcol[1],type="l",lwd=5)
+  u = par("usr")
+  rect(u[1], u[3], u[2], u[4], col = thecolors$background_color, border = thecolors$background_color)
+  lines(a$mids,a$counts,col=bcol[1],lwd=5)
+  lines(b$mids,b$counts,col=bcol[2],lwd=5)
+  lines(c$mids,c$counts,col=bcol[3],lwd=5)
+  lines(d$mids,d$counts,col=bcol[4],lwd=5)
+  lines(e$mids,e$counts,col=bcol[5],lwd=5)
+
+  vname = "No banned weaponry"
+  vname = c(vname,"High-capacity pistol")
+  vname = c(vname,"High-capacity rifle")
+  vname = c(vname,"High-capacity pistol and rifle")
+  vname = c(vname,"Any banned high-capacity (including shotguns)")
+  
+  legend("topleft",legend=vname,col=acol,lwd=7,bty="n",cex=0.9)
+  wname = paste("No\n banned\n weaponry\n",vN[1])
+  wname = c(wname,paste("High-cap\n Pistol\n",vN[2]))
+  wname = c(wname,paste("High-cap\n Rifle\n",vN[3]))
+  wname = c(wname,paste("High-cap\n Pistol and\n Rifle\n",vN[4]))
+  wname = c(wname,paste("Any\n banned\n",vN[5]))
+  axis(1,las=2,labels=wname,at=seq(0,4),cex.axis=1.2)
+  return()
+
+
+}
+
 
 
 

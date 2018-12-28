@@ -521,6 +521,7 @@ fit_to_fraction_involving_banned_weaponry = function(wdat){
 }
 
 
+
 ##################################################################################
 ##################################################################################
 # plot fraction involving FAWB banned weaponry before and after ban
@@ -529,7 +530,7 @@ plot_fraction_involving_banned_weaponry = function(zdat
                                                   ,wdat
                                                   ,myfit
                                                   ,thecolors
-                                                  ,lprint=F
+                                                  ,lprint=T
                                                   ){
 
   

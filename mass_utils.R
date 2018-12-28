@@ -530,7 +530,7 @@ plot_fraction_involving_banned_weaponry = function(zdat
                                                   ,wdat
                                                   ,myfit
                                                   ,thecolors
-                                                  ,lprint=T
+                                                  ,lprint
                                                   ){
 
   
